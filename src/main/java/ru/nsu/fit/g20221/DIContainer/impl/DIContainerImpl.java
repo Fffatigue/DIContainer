@@ -71,7 +71,7 @@ public class DIContainerImpl implements DIContainer {
     }
 
     /**
-     * @return {@code true} if  aregistration was successful, otherwise {@code false}
+     * @return {@code true} if  a registration was successful, otherwise {@code false}
      */
     private boolean tryToRegister(ObjectConfig objectConfig) {
         List<String> constructorArgsName = objectConfig.getConstructorArgs();
