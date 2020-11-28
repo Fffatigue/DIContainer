@@ -1,6 +1,8 @@
 package ru.nsu.fit.g20221.DIContainer.impl;
 
 import java.io.InputStream;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -8,6 +10,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+
+import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.nsu.fit.g20221.DIContainer.ConfigurationReader;
 import ru.nsu.fit.g20221.DIContainer.DIContainer;
 import ru.nsu.fit.g20221.DIContainer.model.ObjectConfig;
@@ -15,6 +23,8 @@ import ru.nsu.fit.g20221.DIContainer.model.ObjectMeta;
 import ru.nsu.fit.g20221.DIContainer.model.Scope;
 
 public class DIContainerImpl implements DIContainer {
+    private static final Logger log = LoggerFactory.getLogger(DIContainerImpl.class);
+
     private final Map<String, ObjectMeta> mappedObjects;
     private final ConfigurationReader configurationReader;
 
@@ -37,7 +47,7 @@ public class DIContainerImpl implements DIContainer {
             if (objectsToCreate == 0) {
                 return;
             }
-            objectConfigs.removeIf(this::tryToRegister);
+            objectConfigs.removeIf(this::tryToCreate);
 
         } while (objectsToCreate != objectConfigs.size());
     }
@@ -60,8 +70,17 @@ public class DIContainerImpl implements DIContainer {
     @Override
     public void unregisterObject(String name) {
         ObjectMeta objectMeta = mappedObjects.remove(name);
-        if (Scope.SINGLETON.equals(objectMeta.getScope())) {
-            //TODO(Sasha) object destroy
+        if (objectMeta != null) {
+            if (Scope.SINGLETON.equals(objectMeta.getScope())) {
+                getMethodsAnnotatedWith(objectMeta.getObject().getClass(), PreDestroy.class).forEach(
+                        m -> {
+                            try {
+                                m.invoke(objectMeta.getObject());
+                            } catch (Exception e) {
+                                log.error("Can't postConstruct object ", e);
+                            }
+                        });
+            }
         }
     }
 
@@ -73,7 +92,7 @@ public class DIContainerImpl implements DIContainer {
     /**
      * @return {@code true} if  a registration was successful, otherwise {@code false}
      */
-    private boolean tryToRegister(ObjectConfig objectConfig) {
+    private boolean tryToCreate(ObjectConfig objectConfig) {
         List<String> constructorArgsName = objectConfig.getConstructorArgs();
         List<Object> args = new ArrayList<>();
         for (String argName : constructorArgsName) {
@@ -92,10 +111,33 @@ public class DIContainerImpl implements DIContainer {
     private Supplier<Object> createObject(List<Object> constructorArgs, Scope objectScope, String className) {
         //TODO(Ayya) object registration
 
-        postConstruct(object);
+//        postConstruct(object);
+        return null;
     }
 
-    private void postConstruct(Object object) {
-        //TODO(Sasha) postConstruct
+    @VisibleForTesting
+    void postConstruct(Object object) {
+        Collection<Method> annotatedMethods = getMethodsAnnotatedWith(object.getClass(), PostConstruct.class);
+        annotatedMethods.forEach(m -> {
+            try {
+                m.invoke(object);
+            } catch (Exception e) {
+                log.error("Can't postConstruct object ", e);
+            }
+        });
+    }
+
+    private static Collection<Method> getMethodsAnnotatedWith(Class<?> type, Class<? extends Annotation> annotation) {
+        List<Method> methods = new ArrayList<>();
+        Class<?> klass = type;
+        while (klass != Object.class) {
+            for (final Method method : klass.getDeclaredMethods()) {
+                if (method.isAnnotationPresent(annotation) && method.getParameterCount() == 0) {
+                    methods.add(method);
+                }
+            }
+            klass = klass.getSuperclass();
+        }
+        return methods;
     }
 }
