@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -20,6 +21,7 @@ import ru.nsu.fit.g20221.DIContainer.ConfigurationReader;
 import ru.nsu.fit.g20221.DIContainer.DIContainer;
 import ru.nsu.fit.g20221.DIContainer.model.ObjectConfig;
 import ru.nsu.fit.g20221.DIContainer.model.ObjectMeta;
+import ru.nsu.fit.g20221.DIContainer.model.Property;
 import ru.nsu.fit.g20221.DIContainer.model.Scope;
 
 public class DIContainerImpl implements DIContainer {
@@ -39,7 +41,7 @@ public class DIContainerImpl implements DIContainer {
     }
 
     @Override
-    public void loadConfig(InputStream config) {
+    public void loadConfig(InputStream config) throws Exception {
         Collection<ObjectConfig> objectConfigs = configurationReader.readConfigurationFromStream(config);
         int objectsToCreate;
         do {
@@ -93,7 +95,11 @@ public class DIContainerImpl implements DIContainer {
      * @return {@code true} if  a registration was successful, otherwise {@code false}
      */
     private boolean tryToCreate(ObjectConfig objectConfig) {
-        List<String> constructorArgsName = objectConfig.getConstructorArgs();
+        List<String> constructorArgsName = objectConfig.getConstructorArgs()
+                .getProperty()
+                .stream()
+                .map(Property::getName)
+                .collect(Collectors.toList());
         List<Object> args = new ArrayList<>();
         for (String argName : constructorArgsName) {
             Object arg = mappedObjects.get(argName);

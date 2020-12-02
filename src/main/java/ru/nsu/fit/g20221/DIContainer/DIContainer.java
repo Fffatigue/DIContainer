@@ -22,7 +22,7 @@ public interface DIContainer {
      * @param config configuration in xml format.
      * @see TODO add link to xml config format
      */
-    void loadConfig(InputStream config);
+    void loadConfig(InputStream config) throws Exception;
 
 
     /**

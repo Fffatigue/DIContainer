@@ -1,29 +1,39 @@
 package ru.nsu.fit.g20221.DIContainer.model;
 
+import javax.xml.bind.annotation.*;
 import java.util.List;
 
 /**
  * Object configuration. Used for creation.
  */
+@XmlAccessorType(XmlAccessType.FIELD)
+@XmlType(name = "objectConfig")
 public class ObjectConfig {
     /**
      * Scope of object.
      */
-    private final Scope scope;
+    @XmlAttribute(required = true)
+    private Scope scope;
     /**
      * Object's name.
      */
-    private final String name;
+    @XmlAttribute(required = true)
+    private String name;
     /**
      * Class name of object.
      */
-    private final String className;
+    @XmlAttribute(required = true)
+    private String className;
     /**
      * Ordered constructor args names.
      */
-    private final List<String> constructorArgs;
+    @XmlElement(required = true)
+    private ConstructorArgs constructorArgs;
 
-    public ObjectConfig(Scope scope, String name, String className, List<String> constructorArgs) {
+    public ObjectConfig() {
+    }
+
+    public ObjectConfig(Scope scope, String name, String className, ConstructorArgs constructorArgs) {
         this.scope = scope;
         this.name = name;
         this.className = className;
@@ -42,7 +52,23 @@ public class ObjectConfig {
         return className;
     }
 
-    public List<String> getConstructorArgs() {
+    public ConstructorArgs getConstructorArgs() {
         return constructorArgs;
+    }
+
+    public void setScope(Scope scope) {
+        this.scope = scope;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setClassName(String className) {
+        this.className = className;
+    }
+
+    public void setConstructorArgs(ConstructorArgs constructorArgs) {
+        this.constructorArgs = constructorArgs;
     }
 }

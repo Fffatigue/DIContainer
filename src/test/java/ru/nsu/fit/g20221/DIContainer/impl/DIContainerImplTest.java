@@ -54,7 +54,7 @@ public class DIContainerImplTest {
     @Test
     void testRegister() {
         DIContainer diContainer = new DIContainerImpl(new HashMap<>(), null);
-        diContainer.registerObject("stringObject", "test");
+        diContainer.registerObjectSingleton("stringObject", "test");
         Assertions.assertEquals("stringObject", diContainer.getObject("test").get());
     }
 
