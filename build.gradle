@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+}
+
+group 'ru.nsu.fit.g20221'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile group: 'javax.annotation', name: 'javax.annotation-api', version: '1.3.2'
+
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
+    compile group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.30'
+
+    implementation("com.google.guava:guava:30.0-jre")
+
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
+}
+
+test {
+    useJUnitPlatform()
+}
