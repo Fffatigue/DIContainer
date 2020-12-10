@@ -9,20 +9,20 @@ import javax.xml.bind.annotation.XmlType;
 @XmlType(name = "property")
 public class Property {
     @XmlAttribute(required = true)
-    private String name;
+    private String ref;
 
     public Property() {
     }
 
-    public Property(String name) {
-        this.name = name;
+    public Property(String ref) {
+        this.ref = ref;
     }
 
-    public String getName() {
-        return name;
+    public String getRef() {
+        return ref;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setRef(String ref) {
+        this.ref = ref;
     }
 }
