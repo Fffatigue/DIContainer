@@ -148,6 +148,7 @@ public class DIContainerImpl implements DIContainer {
         try {
             objectClass = Class.forName(className);
         } catch (ClassNotFoundException e) {
+            log.error("Class name" + className + " doesn't exist");
             throw new RuntimeException(e);
         }
         Class[] argsClasses = constructorArgs
@@ -181,6 +182,7 @@ public class DIContainerImpl implements DIContainer {
             if (objectScope == Scope.SINGLETON) {
                 try {
                     Object o = constructors.newInstance(constructorArgsSupplier);
+                    postConstruct(o);
                     return () -> o;
                 } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
                     log.error("Can't create object of class " + className, e);
