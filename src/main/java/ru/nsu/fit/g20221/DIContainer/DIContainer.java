@@ -12,7 +12,7 @@ public interface DIContainer {
 
     /**
      * @param object registered object.
-     * @param name object's name.
+     * @param name   object's name.
      */
     void registerObject(Object object, String name);
 
@@ -20,10 +20,13 @@ public interface DIContainer {
      * Load configuration to the container.
      *
      * @param config configuration in xml format.
-     * @see TODO add link to xml config format
      */
-    void loadConfig(InputStream config) throws Exception;
+    void loadXmlConfig(InputStream config) throws Exception;
 
+    /**
+     * Scan config class with {@link ru.nsu.fit.g20221.DIContainer.annotation.Config} annotation.
+     */
+    void loadJavaConfig(String configClassName);
 
     /**
      * @return names of registered objects.

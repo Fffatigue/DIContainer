@@ -1,10 +1,11 @@
 package ru.nsu.fit.g20221.DIContainer.util;
 
+import java.io.InputStream;
+
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.transform.stream.StreamSource;
-import java.io.InputStream;
 
 public class JaxbUtil {
     public static <T> T unmarshall(
