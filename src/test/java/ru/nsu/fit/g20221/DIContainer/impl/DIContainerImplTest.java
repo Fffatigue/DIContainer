@@ -6,12 +6,14 @@ import java.util.Map;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
+import com.google.common.collect.ArrayListMultimap;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import ru.nsu.fit.g20221.DIContainer.DIContainer;
 import ru.nsu.fit.g20221.DIContainer.impl.testModel.House;
 import ru.nsu.fit.g20221.DIContainer.impl.testModel.Human;
 import ru.nsu.fit.g20221.DIContainer.impl.testModel.Pet;
+import ru.nsu.fit.g20221.DIContainer.impl.testModel.ScannedObject;
 import ru.nsu.fit.g20221.DIContainer.model.ObjectMeta;
 import ru.nsu.fit.g20221.DIContainer.model.Scope;
 
@@ -24,7 +26,8 @@ public class DIContainerImplTest {
     void testLoadConfig() {
         DIContainer diContainer = new DIContainerImpl(new ConfigurationReaderImpl());
         Assertions.assertDoesNotThrow(
-                () -> diContainer.loadXmlConfig(DIContainerImplTest.class.getClassLoader().getResourceAsStream("xmlConfigure.xml"))
+                () -> diContainer.loadXmlConfig(DIContainerImplTest.class.getClassLoader().getResourceAsStream(
+                        "xmlConfigure.xml"))
         );
         Human human1 = (Human) diContainer.getObject("human").get();
         Human human2 = (Human) diContainer.getObject("human").get();
@@ -46,6 +49,19 @@ public class DIContainerImplTest {
     }
 
     @Test
+    void testScan() {
+        DIContainer diContainer = new DIContainerImpl(new ConfigurationReaderImpl());
+        Human human = new Human("human");
+        House house = new House(human, "addr");
+        diContainer.registerObject(human, "human");
+        diContainer.registerObject(house, "house1");
+        diContainer.componentScan();
+        ScannedObject scannedObject = (ScannedObject) diContainer.getObject("scanned").get();
+        Assertions.assertEquals(human, scannedObject.getHuman());
+        Assertions.assertEquals(house, scannedObject.getHouse());
+    }
+
+    @Test
     void testPostConstruct() {
         DIContainerImpl diContainer = new DIContainerImpl(null);
         TestAnnotationsClass testAnnotations = new TestAnnotationsClass();
@@ -63,7 +79,7 @@ public class DIContainerImplTest {
         objectMetaMap.put("test1", new ObjectMeta(Scope.SINGLETON, () -> testAnnotations1));
         objectMetaMap.put("test2", new ObjectMeta(Scope.PROTOTYPE, () -> testAnnotations2));
 
-        DIContainer diContainer = new DIContainerImpl(objectMetaMap, null, null);
+        DIContainer diContainer = new DIContainerImpl(objectMetaMap, null, ArrayListMultimap.create());
         diContainer.unregisterObject("test1");
         diContainer.unregisterObject("test2");
 

@@ -47,6 +47,11 @@ public interface DIContainer {
     void unregisterObject(String name);
 
     /**
+     * Register all objects that marked {@link ru.nsu.fit.g20221.DIContainer.annotation.Component} annotation.
+     */
+    void componentScan();
+
+    /**
      * Close container. Calls {@link javax.annotation.PreDestroy} annotated methods of registered objects.
      */
     void close();
