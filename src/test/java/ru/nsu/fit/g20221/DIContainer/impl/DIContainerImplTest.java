@@ -24,7 +24,7 @@ public class DIContainerImplTest {
     void testLoadConfig() {
         DIContainer diContainer = new DIContainerImpl(new ConfigurationReaderImpl());
         Assertions.assertDoesNotThrow(
-                () -> diContainer.loadConfig(DIContainerImplTest.class.getClassLoader().getResourceAsStream("xmlConfigure.xml"))
+                () -> diContainer.loadXmlConfig(DIContainerImplTest.class.getClassLoader().getResourceAsStream("xmlConfigure.xml"))
         );
         Human human1 = (Human) diContainer.getObject("human").get();
         Human human2 = (Human) diContainer.getObject("human").get();
