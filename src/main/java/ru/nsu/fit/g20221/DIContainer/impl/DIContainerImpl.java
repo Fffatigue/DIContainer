@@ -28,6 +28,7 @@ import ru.nsu.fit.g20221.DIContainer.DIContainer;
 import ru.nsu.fit.g20221.DIContainer.model.JavaObjectConfig;
 import ru.nsu.fit.g20221.DIContainer.model.ObjectMeta;
 import ru.nsu.fit.g20221.DIContainer.model.Property;
+import ru.nsu.fit.g20221.DIContainer.model.ScanObjectConfig;
 import ru.nsu.fit.g20221.DIContainer.model.Scope;
 import ru.nsu.fit.g20221.DIContainer.model.XmlObjectConfig;
 
@@ -68,7 +69,7 @@ public class DIContainerImpl implements DIContainer {
 
     @Override
     public void registerObject(Object object, String name) {
-        registredObjectsNames.put(name, new ObjectMeta(Scope.SINGLETON, () -> object));
+        registerObject(new ObjectMeta(Scope.SINGLETON, () -> object), name, object.getClass());
     }
 
     @Override
@@ -139,6 +140,9 @@ public class DIContainerImpl implements DIContainer {
     public void unregisterObject(String name) {
         ObjectMeta objectMeta = registredObjectsNames.remove(name);
         if (objectMeta != null) {
+            for (Class registredClass : registredObjectsClasses.keySet()) {
+                registredObjectsClasses.remove(registredClass, objectMeta);
+            }
             if (Scope.SINGLETON.equals(objectMeta.getScope())) {
                 getMethodsAnnotatedWith(objectMeta.getObject().getClass(), PreDestroy.class).forEach(
                         m -> {
@@ -150,6 +154,30 @@ public class DIContainerImpl implements DIContainer {
                         });
             }
         }
+    }
+
+    @Override
+    public void componentScan() {
+        Collection<ScanObjectConfig> scanObjectConfigs = configurationReader.readConfigurationFromComponentScan();
+        Map<String, ScanObjectConfig> mappedObjectConfig = new HashMap<>();
+        int objectsToCreate;
+
+        for (ScanObjectConfig objectConfig : scanObjectConfigs) {
+            if (mappedObjectConfig.containsKey(objectConfig.getName())) {
+                log.error("Object name {} duplicate", objectConfig.getName());
+                throw new RuntimeException("Object name " + objectConfig.getName() + " duplicate");
+            }
+            mappedObjectConfig.put(objectConfig.getName(), objectConfig);
+        }
+
+        do {
+            objectsToCreate = scanObjectConfigs.size();
+            if (objectsToCreate == 0) {
+                return;
+            }
+            scanObjectConfigs.removeIf(this::tryToCreate);
+
+        } while (objectsToCreate != scanObjectConfigs.size());
     }
 
     @Override
@@ -171,13 +199,40 @@ public class DIContainerImpl implements DIContainer {
 
         Map<Class, Object> dependenciesByClass = new HashMap<>();
         Map<String, Object> dependenciesByName = new HashMap<>();
-        for(Class clazz : objectConfig.getDependenciesByClass() ) {
-            dependenciesByClass.put(clazz, registredObjectsClasses.get(clazz).stream().findFirst().get());
+        for (Class clazz : objectConfig.getDependenciesByClass()) {
+            dependenciesByClass.put(clazz, registredObjectsClasses.get(clazz).stream().findFirst().get().getObject());
         }
-        for(String name : objectConfig.getDependenciesByNames() ) {
-            dependenciesByName.put(name, registredObjectsNames.get(name));
+        for (String name : objectConfig.getDependenciesByNames()) {
+            dependenciesByName.put(name, registredObjectsNames.get(name).getObject());
         }
-        registredObjectsNames.put(objectConfig.getName(), objectConfig.createObject(dependenciesByClass, dependenciesByName));
+        ObjectMeta objectMeta = objectConfig.createObject(dependenciesByClass,
+                dependenciesByName);
+        registerObject(objectMeta, objectConfig.getName(), objectConfig.getCreationMethod().getDeclaringClass());
+        return true;
+    }
+
+    /**
+     * @return {@code true} if  a registration was successful, otherwise {@code false}
+     */
+    private boolean tryToCreate(ScanObjectConfig objectConfig) {
+        //TODO нужно вынести общую часть из JavaObjectConfig и ScanObjectConfig и объеденить tryToCreate
+        if (objectConfig.getDependenciesByClass().stream().anyMatch(c -> registredObjectsClasses.get(c).size() != 1)) {
+            return false;
+        }
+        if (objectConfig.getDependenciesByName().stream().anyMatch(name -> registredObjectsNames.get(name) == null)) {
+            return false;
+        }
+
+        Map<Class, Object> dependenciesByClass = new HashMap<>();
+        Map<String, Object> dependenciesByName = new HashMap<>();
+        for (Class clazz : objectConfig.getDependenciesByClass()) {
+            dependenciesByClass.put(clazz, registredObjectsClasses.get(clazz).stream().findFirst().get().getObject());
+        }
+        for (String name : objectConfig.getDependenciesByName()) {
+            dependenciesByName.put(name, registredObjectsNames.get(name).getObject());
+        }
+        registerObject(objectConfig.createObject(dependenciesByClass, dependenciesByName),
+                objectConfig.getName(), objectConfig.getConstructor().getDeclaringClass());
         return true;
     }
 
@@ -204,13 +259,9 @@ public class DIContainerImpl implements DIContainer {
         List<Object> args = argsMeta.stream().map(m -> m.getObject()).collect(Collectors.toList());
         ObjectMeta objectMeta = new ObjectMeta(objectConfig.getScope(),
                 createObject(args, objectConfig.getScope(), objectConfig.getClassName()));
-        registredObjectsNames.put(objectConfig.getName(), objectMeta);
         try {
             Class objectClass = Class.forName(objectConfig.getClassName());
-            while (objectClass != null) {
-                registredObjectsClasses.put(objectClass, objectMeta);
-                objectClass = objectClass.getSuperclass();
-            }
+            registerObject(objectMeta, objectConfig.getName(), objectClass);
         } catch (ClassNotFoundException e) {
             log.error("Class name {} doesn't exist", objectConfig.getClassName());
             throw new RuntimeException(e);
@@ -267,6 +318,14 @@ public class DIContainerImpl implements DIContainer {
             };
         }
 
+    }
+
+    private void registerObject(ObjectMeta objectMeta, String name, Class<?> objectClass) {
+        registredObjectsNames.put(name, objectMeta);
+        while (objectClass != null) {
+            registredObjectsClasses.put(objectClass, objectMeta);
+            objectClass = objectClass.getSuperclass();
+        }
     }
 
     @VisibleForTesting

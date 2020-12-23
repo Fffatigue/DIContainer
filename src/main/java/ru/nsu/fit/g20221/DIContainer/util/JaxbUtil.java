@@ -14,7 +14,7 @@ public class JaxbUtil {
     ) throws Exception {
         JAXBContext context = JAXBContext.newInstance(class_);
         Unmarshaller um = context.createUnmarshaller();
-        JAXBElement<T> result = (JAXBElement<T>) um.unmarshal(new StreamSource(is), class_);
+        JAXBElement<T> result = um.unmarshal(new StreamSource(is), class_);
         return result.getValue();
     }
 }

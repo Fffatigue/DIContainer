@@ -37,4 +37,8 @@ public class JavaObjectConfig {
         //TODO создание объекта на основе замапленных сущностей.
         return null;
     }
+
+    public Method getCreationMethod() {
+        return creationMethod;
+    }
 }
