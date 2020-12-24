@@ -10,7 +10,11 @@ import com.google.common.collect.ArrayListMultimap;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import ru.nsu.fit.g20221.DIContainer.DIContainer;
-import ru.nsu.fit.g20221.DIContainer.impl.testModel.*;
+import ru.nsu.fit.g20221.DIContainer.impl.testModel.ConfigurationObject;
+import ru.nsu.fit.g20221.DIContainer.impl.testModel.House;
+import ru.nsu.fit.g20221.DIContainer.impl.testModel.Human;
+import ru.nsu.fit.g20221.DIContainer.impl.testModel.Pet;
+import ru.nsu.fit.g20221.DIContainer.impl.testModel.ScannedObject;
 import ru.nsu.fit.g20221.DIContainer.model.ObjectMeta;
 import ru.nsu.fit.g20221.DIContainer.model.Scope;
 
@@ -88,10 +92,10 @@ public class DIContainerImplTest {
     void testPostConstruct() {
         DIContainerImpl diContainer = new DIContainerImpl(null);
         TestAnnotationsClass testAnnotations = new TestAnnotationsClass();
-        diContainer.postConstruct(testAnnotations);
+        diContainer.invokeAnnotation(testAnnotations, PostConstruct.class);
         Assertions.assertEquals(0, testAnnotations.preDestroyCalls);
         Assertions.assertEquals(0, testAnnotations.withoutAnnotationCalls);
-        Assertions.assertEquals(2, testAnnotations.postConstuctCalls);
+        Assertions.assertEquals(1, testAnnotations.postConstuctCalls);
     }
 
     @Test
@@ -109,7 +113,7 @@ public class DIContainerImplTest {
         Assertions.assertTrue(diContainer.getObject("test1").isEmpty());
         Assertions.assertTrue(diContainer.getObject("test2").isEmpty());
 
-        Assertions.assertEquals(2, testAnnotations1.preDestroyCalls);
+        Assertions.assertEquals(1, testAnnotations1.preDestroyCalls);
         Assertions.assertEquals(0, testAnnotations1.withoutAnnotationCalls);
         Assertions.assertEquals(0, testAnnotations1.postConstuctCalls);
 
@@ -139,38 +143,8 @@ public class DIContainerImplTest {
             postConstuctCalls++;
         }
 
-        @PostConstruct
-        public int test3() {
-            return postConstuctCalls++;
-        }
-
-        @PostConstruct
-        public void test4(Object arg1) {
-            postConstuctCalls++;
-        }
-
-        @PostConstruct
-        public void test5(Object arg1, Object arg2) {
-            postConstuctCalls++;
-        }
-
         @PreDestroy
         public void test6() {
-            preDestroyCalls++;
-        }
-
-        @PreDestroy
-        public int test7() {
-            return preDestroyCalls++;
-        }
-
-        @PreDestroy
-        public void test8(Object arg1) {
-            preDestroyCalls++;
-        }
-
-        @PreDestroy
-        public void test9(Object arg1, Object arg2) {
             preDestroyCalls++;
         }
     }

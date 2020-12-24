@@ -25,13 +25,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.nsu.fit.g20221.DIContainer.ConfigurationReader;
 import ru.nsu.fit.g20221.DIContainer.DIContainer;
-import ru.nsu.fit.g20221.DIContainer.model.*;
+import ru.nsu.fit.g20221.DIContainer.model.AutoObjectConfig;
+import ru.nsu.fit.g20221.DIContainer.model.JavaObjectConfig;
+import ru.nsu.fit.g20221.DIContainer.model.ObjectMeta;
+import ru.nsu.fit.g20221.DIContainer.model.Property;
+import ru.nsu.fit.g20221.DIContainer.model.ScanObjectConfig;
+import ru.nsu.fit.g20221.DIContainer.model.Scope;
+import ru.nsu.fit.g20221.DIContainer.model.XmlObjectConfig;
 
 public class DIContainerImpl implements DIContainer {
     private static final Logger log = LoggerFactory.getLogger(DIContainerImpl.class);
 
     private final Map<String, ObjectMeta> registredObjectsNames;
-    private final Multimap<Class, ObjectMeta> registredObjectsClasses;
+    private final Multimap<Class<?>, ObjectMeta> registredObjectsClasses;
     private final ConfigurationReader configurationReader;
 
     public DIContainerImpl(ConfigurationReader configurationReader) {
@@ -42,7 +48,7 @@ public class DIContainerImpl implements DIContainer {
 
     public DIContainerImpl(Map<String, ObjectMeta> registredObjectsNames,
                            ConfigurationReader configurationReader,
-                           Multimap<Class, ObjectMeta> registredObjectsClasses) {
+                           Multimap<Class<?>, ObjectMeta> registredObjectsClasses) {
         this.registredObjectsNames = registredObjectsNames;
         this.configurationReader = configurationReader;
         this.registredObjectsClasses = registredObjectsClasses;
@@ -92,7 +98,7 @@ public class DIContainerImpl implements DIContainer {
     }
 
     @Override
-    public void loadJavaConfig(Class configClazz) {
+    public void loadJavaConfig(Class<?> configClazz) {
         Map<String, JavaObjectConfig> mappedJavaObjectConfig = new HashMap<>();
         Collection<JavaObjectConfig> objectConfigs = configurationReader.readConfigurationFromClass(configClazz);
         int objectsToCreate;
@@ -135,18 +141,11 @@ public class DIContainerImpl implements DIContainer {
     public void unregisterObject(String name) {
         ObjectMeta objectMeta = registredObjectsNames.remove(name);
         if (objectMeta != null) {
-            for (Class registredClass : registredObjectsClasses.keySet()) {
+            for (Class<?> registredClass : registredObjectsClasses.keySet()) {
                 registredObjectsClasses.remove(registredClass, objectMeta);
             }
             if (Scope.SINGLETON.equals(objectMeta.getScope())) {
-                getMethodsAnnotatedWith(objectMeta.getObject().getClass(), PreDestroy.class).forEach(
-                        m -> {
-                            try {
-                                m.invoke(objectMeta.getObject());
-                            } catch (Exception e) {
-                                log.error("Can't postConstruct object ", e);
-                            }
-                        });
+                invokeAnnotation(objectMeta.getObject(), PreDestroy.class);
             }
         }
     }
@@ -185,7 +184,8 @@ public class DIContainerImpl implements DIContainer {
      */
     private boolean tryToCreate(AutoObjectConfig objectConfig) {
         if (objectConfig.getDependenciesByClass().stream().anyMatch(c -> registredObjectsClasses.get(c).size() != 1)) {
-            log.error("More or less then one implementation of class parameter for creation object {}", objectConfig.getName());
+            log.error("More or less then one implementation of class parameter for creation object {}",
+                    objectConfig.getName());
             throw new RuntimeException("More or less then one implementation of class parameter for creation object " + objectConfig.getName());
         }
         if (objectConfig.getDependenciesByName().stream().anyMatch(name -> registredObjectsNames.get(name) == null)) {
@@ -193,17 +193,16 @@ public class DIContainerImpl implements DIContainer {
             throw new RuntimeException("Named parameter doesn't exist for creation object " + objectConfig.getName());
         }
 
-        Map<Class, Object> dependenciesByClass = new HashMap<>();
+        Map<Class<?>, Object> dependenciesByClass = new HashMap<>();
         Map<String, Object> dependenciesByName = new HashMap<>();
-        for (Class clazz : objectConfig.getDependenciesByClass()) {
+        for (Class<?> clazz : objectConfig.getDependenciesByClass()) {
             dependenciesByClass.put(clazz, registredObjectsClasses.get(clazz).stream().findFirst().get().getObject());
         }
         for (String name : objectConfig.getDependenciesByName()) {
             dependenciesByName.put(name, registredObjectsNames.get(name).getObject());
         }
-        ObjectMeta objectMeta = objectConfig.createObject(dependenciesByClass,
-                dependenciesByName);
-        registerObject(objectMeta, objectConfig.getName(), objectConfig.getCreationMethod().getDeclaringClass());
+        ObjectMeta objectMeta = objectConfig.createObject(dependenciesByClass, dependenciesByName);
+        registerObject(objectMeta, objectConfig.getName(), objectConfig.getCreatedClass());
         return true;
     }
 
@@ -231,7 +230,7 @@ public class DIContainerImpl implements DIContainer {
         ObjectMeta objectMeta = new ObjectMeta(objectConfig.getScope(),
                 createObject(args, objectConfig.getScope(), objectConfig.getClassName()));
         try {
-            Class objectClass = Class.forName(objectConfig.getClassName());
+            Class<?> objectClass = Class.forName(objectConfig.getClassName());
             registerObject(objectMeta, objectConfig.getName(), objectClass);
         } catch (ClassNotFoundException e) {
             log.error("Class name {} doesn't exist", objectConfig.getClassName());
@@ -244,7 +243,7 @@ public class DIContainerImpl implements DIContainer {
             List<Object> constructorArgs,
             Scope objectScope,
             String className) {
-        Class objectClass;
+        Class<?> objectClass;
         try {
             objectClass = Class.forName(className);
         } catch (ClassNotFoundException e) {
@@ -252,9 +251,9 @@ public class DIContainerImpl implements DIContainer {
             throw new RuntimeException(e);
         }
 
-        Optional<Constructor> constructor = Stream.of(objectClass.getConstructors()).filter(c ->
+        Optional<Constructor<?>> constructor = Stream.of(objectClass.getConstructors()).filter(c ->
                 c.getParameterCount() == constructorArgs.size()).filter(c -> {
-                    Class[] classes = c.getParameterTypes();
+                    Class<?>[] classes = c.getParameterTypes();
                     for (int i = 0; i < classes.length || i < constructorArgs.size(); ++i) {
                         if (!classes[i].isInstance(constructorArgs.get(i))) {
                             return false;
@@ -270,7 +269,7 @@ public class DIContainerImpl implements DIContainer {
         if (objectScope == Scope.SINGLETON) {
             try {
                 Object o = constructor.get().newInstance(constructorArgs.toArray());
-                postConstruct(o);
+                invokeAnnotation(o, PostConstruct.class);
                 return () -> o;
             } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
                 log.error("Can't create object of class " + className, e);
@@ -279,9 +278,9 @@ public class DIContainerImpl implements DIContainer {
         } else {
             return () -> {
                 try {
-                    Object a = constructor.get().newInstance(constructorArgs.toArray());
-                    postConstruct(a);
-                    return a;
+                    Object o = constructor.get().newInstance(constructorArgs.toArray());
+                    invokeAnnotation(o, PostConstruct.class);
+                    return o;
                 } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
                     log.error("Can't create object of class " + className, e);
                     throw new RuntimeException(e);
@@ -300,8 +299,13 @@ public class DIContainerImpl implements DIContainer {
     }
 
     @VisibleForTesting
-    void postConstruct(Object object) {
-        Collection<Method> annotatedMethods = getMethodsAnnotatedWith(object.getClass(), PostConstruct.class);
+    void invokeAnnotation(Object object, Class<? extends Annotation> annotationClass) {
+        Collection<Method> annotatedMethods = getMethodsAnnotatedWith(object.getClass(), annotationClass);
+        if (annotatedMethods.size() > 1) {
+            log.error("Object {} have more then 1 {} method",
+                    object.getClass().toString(), annotationClass.getCanonicalName());
+            return;
+        }
         annotatedMethods.forEach(m -> {
             try {
                 m.invoke(object);

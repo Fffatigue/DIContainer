@@ -1,16 +1,16 @@
 <configure>
-    <objectConfig className="ru.nsu.fit.g20221.DIContainer.impl.testModel.Pet" name = "pet" scope="PROTOTYPE">
+    <objectConfig className="ru.nsu.fit.g20221.DIContainer.impl.testModel.Pet" name="pet" scope="PROTOTYPE">
         <constructorArgs>
             <property ref="house"/>
             <property ref="human"/>
         </constructorArgs>
     </objectConfig>
 
-    <objectConfig className="ru.nsu.fit.g20221.DIContainer.impl.testModel.House" name = "house" scope="SINGLETON">
+    <objectConfig className="ru.nsu.fit.g20221.DIContainer.impl.testModel.House" name="house" scope="SINGLETON">
         <constructorArgs>
             <property ref="human"/>
         </constructorArgs>
     </objectConfig>
 
-    <objectConfig className="ru.nsu.fit.g20221.DIContainer.impl.testModel.Human" name = "human" scope="SINGLETON"/>
+    <objectConfig className="ru.nsu.fit.g20221.DIContainer.impl.testModel.Human" name="human" scope="SINGLETON"/>
 </configure>
