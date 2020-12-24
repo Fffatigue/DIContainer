@@ -10,7 +10,7 @@ import javax.annotation.Nullable;
 
 import ru.nsu.fit.g20221.DIContainer.annotation.Name;
 
-public class ScanObjectConfig {
+public class ScanObjectConfig implements AutoObjectConfig {
     private final String name;
     private final List<Class> dependenciesByClass;
     private final List<String> dependenciesByName;
@@ -56,7 +56,7 @@ public class ScanObjectConfig {
         return dependenciesByName;
     }
 
-    public Constructor getConstructor() {
+    public Constructor getCreationMethod() {
         return constructor;
     }
 

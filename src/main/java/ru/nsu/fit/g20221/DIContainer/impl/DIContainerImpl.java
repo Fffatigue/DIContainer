@@ -25,12 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.nsu.fit.g20221.DIContainer.ConfigurationReader;
 import ru.nsu.fit.g20221.DIContainer.DIContainer;
-import ru.nsu.fit.g20221.DIContainer.model.JavaObjectConfig;
-import ru.nsu.fit.g20221.DIContainer.model.ObjectMeta;
-import ru.nsu.fit.g20221.DIContainer.model.Property;
-import ru.nsu.fit.g20221.DIContainer.model.ScanObjectConfig;
-import ru.nsu.fit.g20221.DIContainer.model.Scope;
-import ru.nsu.fit.g20221.DIContainer.model.XmlObjectConfig;
+import ru.nsu.fit.g20221.DIContainer.model.*;
 
 public class DIContainerImpl implements DIContainer {
     private static final Logger log = LoggerFactory.getLogger(DIContainerImpl.class);
@@ -97,9 +92,9 @@ public class DIContainerImpl implements DIContainer {
     }
 
     @Override
-    public void loadJavaConfig(String configClassName) {
+    public void loadJavaConfig(Class configClazz) {
         Map<String, JavaObjectConfig> mappedJavaObjectConfig = new HashMap<>();
-        Collection<JavaObjectConfig> objectConfigs = configurationReader.readConfigurationFromClass(configClassName);
+        Collection<JavaObjectConfig> objectConfigs = configurationReader.readConfigurationFromClass(configClazz);
         int objectsToCreate;
 
         for (JavaObjectConfig objectConfig : objectConfigs) {
@@ -188,39 +183,14 @@ public class DIContainerImpl implements DIContainer {
     /**
      * @return {@code true} if  a registration was successful, otherwise {@code false}
      */
-    private boolean tryToCreate(JavaObjectConfig objectConfig) {
-        //TODO тут если больше 1 подходящего аргумента нужно эксепшн кидать
+    private boolean tryToCreate(AutoObjectConfig objectConfig) {
         if (objectConfig.getDependenciesByClass().stream().anyMatch(c -> registredObjectsClasses.get(c).size() != 1)) {
-            return false;
-        }
-        if (objectConfig.getDependenciesByNames().stream().anyMatch(name -> registredObjectsNames.get(name) == null)) {
-            return false;
-        }
-
-        Map<Class, Object> dependenciesByClass = new HashMap<>();
-        Map<String, Object> dependenciesByName = new HashMap<>();
-        for (Class clazz : objectConfig.getDependenciesByClass()) {
-            dependenciesByClass.put(clazz, registredObjectsClasses.get(clazz).stream().findFirst().get().getObject());
-        }
-        for (String name : objectConfig.getDependenciesByNames()) {
-            dependenciesByName.put(name, registredObjectsNames.get(name).getObject());
-        }
-        ObjectMeta objectMeta = objectConfig.createObject(dependenciesByClass,
-                dependenciesByName);
-        registerObject(objectMeta, objectConfig.getName(), objectConfig.getCreationMethod().getDeclaringClass());
-        return true;
-    }
-
-    /**
-     * @return {@code true} if  a registration was successful, otherwise {@code false}
-     */
-    private boolean tryToCreate(ScanObjectConfig objectConfig) {
-        //TODO нужно вынести общую часть из JavaObjectConfig и ScanObjectConfig и объеденить tryToCreate
-        if (objectConfig.getDependenciesByClass().stream().anyMatch(c -> registredObjectsClasses.get(c).size() != 1)) {
-            return false;
+            log.error("More or less then one implementation of class parameter for creation object {}", objectConfig.getName());
+            throw new RuntimeException("More or less then one implementation of class parameter for creation object " + objectConfig.getName());
         }
         if (objectConfig.getDependenciesByName().stream().anyMatch(name -> registredObjectsNames.get(name) == null)) {
-            return false;
+            log.error("Named parameter doesn't exist for creation object {}", objectConfig.getName());
+            throw new RuntimeException("Named parameter doesn't exist for creation object " + objectConfig.getName());
         }
 
         Map<Class, Object> dependenciesByClass = new HashMap<>();
@@ -231,8 +201,9 @@ public class DIContainerImpl implements DIContainer {
         for (String name : objectConfig.getDependenciesByName()) {
             dependenciesByName.put(name, registredObjectsNames.get(name).getObject());
         }
-        registerObject(objectConfig.createObject(dependenciesByClass, dependenciesByName),
-                objectConfig.getName(), objectConfig.getConstructor().getDeclaringClass());
+        ObjectMeta objectMeta = objectConfig.createObject(dependenciesByClass,
+                dependenciesByName);
+        registerObject(objectMeta, objectConfig.getName(), objectConfig.getCreationMethod().getDeclaringClass());
         return true;
     }
 
