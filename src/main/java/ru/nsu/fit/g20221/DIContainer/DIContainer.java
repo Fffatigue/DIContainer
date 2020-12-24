@@ -26,7 +26,7 @@ public interface DIContainer {
     /**
      * Scan config class with {@link ru.nsu.fit.g20221.DIContainer.annotation.Config} annotation.
      */
-    void loadJavaConfig(Class configClazz);
+    void loadJavaConfig(Class<?> configClazz);
 
     /**
      * @return names of registered objects.
