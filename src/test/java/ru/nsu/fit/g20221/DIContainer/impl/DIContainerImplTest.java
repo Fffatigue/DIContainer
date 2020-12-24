@@ -10,10 +10,7 @@ import com.google.common.collect.ArrayListMultimap;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import ru.nsu.fit.g20221.DIContainer.DIContainer;
-import ru.nsu.fit.g20221.DIContainer.impl.testModel.House;
-import ru.nsu.fit.g20221.DIContainer.impl.testModel.Human;
-import ru.nsu.fit.g20221.DIContainer.impl.testModel.Pet;
-import ru.nsu.fit.g20221.DIContainer.impl.testModel.ScannedObject;
+import ru.nsu.fit.g20221.DIContainer.impl.testModel.*;
 import ru.nsu.fit.g20221.DIContainer.model.ObjectMeta;
 import ru.nsu.fit.g20221.DIContainer.model.Scope;
 
@@ -46,6 +43,32 @@ public class DIContainerImplTest {
         Assertions.assertEquals(pet1.getHouse(), pet2.getHouse());
         Assertions.assertEquals(pet1.getHuman(), pet2.getHuman());
 
+    }
+
+    @Test
+    void testJavaConfiguration() {
+        DIContainer diContainer = new DIContainerImpl(new ConfigurationReaderImpl());
+        Human human = new Human("human");
+        House house = new House(human, "houseJavaConfig");
+        diContainer.registerObject(human, "human");
+        diContainer.registerObject(house, "houseJavaConfig");
+        diContainer.loadJavaConfig(ConfigurationObject.class);
+        Pet pet = (Pet) diContainer.getObject("pet").get();
+        Assertions.assertEquals(house, pet.getHouse());
+        Assertions.assertEquals(human, pet.getHuman());
+    }
+
+
+    @Test
+    void testJavaConfigurationFailed() {
+        DIContainer diContainer = new DIContainerImpl(new ConfigurationReaderImpl());
+        Human human1 = new Human("human1");
+        Human human2 = new Human("human2");
+        House house = new House(human1, "houseJavaConfig");
+        diContainer.registerObject(human1, "human1");
+        diContainer.registerObject(human2, "human2");
+        diContainer.registerObject(house, "houseJavaConfig");
+        Assertions.assertThrows(RuntimeException.class, () -> diContainer.loadJavaConfig(ConfigurationObject.class));
     }
 
     @Test
