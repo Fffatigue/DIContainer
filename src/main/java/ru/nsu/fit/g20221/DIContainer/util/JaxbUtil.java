@@ -12,7 +12,13 @@ public class JaxbUtil {
     private JaxbUtil() {
         throw new UnsupportedOperationException();
     }
-
+    /**
+     * Unmarshall an object from XML format that passed through InputStream into class.
+     *
+     * @param class_ class, in which an object will be unmarshalled.
+     * @param is input stream with XML format.
+     * @return an unmarshalled object.
+     */
     public static <T> T unmarshall(
             Class<T> class_,
             InputStream is) throws RuntimeException {

@@ -42,6 +42,13 @@ public abstract class AutoObjectConfig {
 
     public abstract Class<?> getCreatedClass();
 
+    /**
+     * Creates an object by invocation creationMethod.
+     *
+     * @param  dependenciesByClass dependencies by class for method invocation.
+     * @param dependenciesByName dependencies by name for method invocation.
+     * @return created an ObjectMeta instance.
+     */
     public abstract ObjectMeta createObject(
             Map<Class<?>, Object> dependenciesByClass,
             Map<String, Object> dependenciesByName
