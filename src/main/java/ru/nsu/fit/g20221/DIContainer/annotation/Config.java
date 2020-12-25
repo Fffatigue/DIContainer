@@ -6,7 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- *
+ * An annotation indicates that the class is a java configuration for DI container.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
